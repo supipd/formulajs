@@ -2530,6 +2530,11 @@ exports.LARGE = function(range, k) {
   if (utils.anyIsError(range, k)) {
     return range;
   }
+
+  if(k < 0 || range.length < k){
+    return error.value;
+  }
+
   return range.sort(function(a, b) {
     return b - a;
   })[k - 1];
@@ -11331,26 +11336,43 @@ exports.OCT2HEX = function(number, places) {
 /***/ (function(module, exports, __webpack_require__) {
 
 var categories = [
-  __webpack_require__(12),
-  __webpack_require__(14),
-  __webpack_require__(10),
-  __webpack_require__(15),
-  __webpack_require__(2),
-  __webpack_require__(4),
-  __webpack_require__(7),
-  __webpack_require__(16),
-  __webpack_require__(6),
-  __webpack_require__(17),
-  __webpack_require__(3),
-  __webpack_require__(9)
+  { fun: __webpack_require__(12)    ,cat: "compatibility" }
+, { fun: __webpack_require__(14)         ,cat: "database" }
+, { fun: __webpack_require__(10)      ,cat: "engineering" }
+, { fun: __webpack_require__(15)          ,cat: "logical" }
+, { fun: __webpack_require__(2)        ,cat: "math-trig" }
+, { fun: __webpack_require__(4)             ,cat: "text" }
+, { fun: __webpack_require__(7)        ,cat: "date-time" }
+, { fun: __webpack_require__(16)        ,cat: "financial" }
+, { fun: __webpack_require__(6)      ,cat: "information" }
+, { fun: __webpack_require__(17) ,cat: "lookup-reference" }
+, { fun: __webpack_require__(3)      ,cat: "statistical" }
+, { fun: __webpack_require__(9)    ,cat: "miscellaneous" }
 ];
 
 for (var c in categories) {
   var category = categories[c];
-  for (var f in category) {
-    exports[f] = exports[f] || category[f];
+  for (var f in category.fun) {
+    exports[f] = exports[f] || category.fun[f];
+    // adding category to exported function
+    exports[f].category = category.cat;
   }
 }
+
+var cats = {}
+,   rgxp = /function\s*\(([^\)]*?)\)/
+; 
+Object.keys(exports).forEach( function(k) {
+    rgxp.lastIndex = 0;
+    var f = exports[k]
+    ,   c = f.category
+    ,   m = rgxp.exec(f.toString())
+    ;
+    cats[c] = cats[c] || {};
+    cats[c][k] = m && m[1];
+})
+exports._functionsList = cats;
+
 
 
 /***/ }),
@@ -12113,8 +12135,17 @@ var information = __webpack_require__(6);
 
 exports.AND = function() {
   var args = utils.flatten(arguments);
-  var result = true;
+  var result = error.value;
   for (var i = 0; i < args.length; i++) {
+    if (args[i] instanceof Error) {
+      return args[i];
+    }
+    if (args[i] === undefined || args[i] === null || typeof args[i] === "string") {
+      continue;
+    }
+    if (result === error.value) {
+      result = true;
+    }
     if (!args[i]) {
       result = false;
     }
@@ -12144,8 +12175,17 @@ exports.FALSE = function() {
 };
 
 exports.IF = function(test, then_value, otherwise_value) {
+  if (test instanceof Error) {
+    return test;
+  }
   then_value = arguments.length >= 2 ? then_value : true;
-  otherwise_value = arguments.length === 3 ? otherwise_value : false
+  if (then_value === undefined || then_value === null) {
+    then_value = 0;
+  }
+  otherwise_value = arguments.length === 3 ? otherwise_value : false;
+  if (otherwise_value === undefined || otherwise_value === null) {
+    otherwise_value = 0;
+  }
   return test ? then_value : otherwise_value;
 };
 
@@ -12170,13 +12210,28 @@ exports.IFNA = function(value, value_if_na) {
 };
 
 exports.NOT = function(logical) {
+  if (typeof logical === "string") {
+    return error.value;
+  }
+  if (logical instanceof Error) {
+    return logical;
+  }
   return !logical;
 };
 
 exports.OR = function() {
   var args = utils.flatten(arguments);
-  var result = false;
+  var result = error.value;
   for (var i = 0; i < args.length; i++) {
+    if (args[i] instanceof Error) {
+      return args[i];
+    }
+    if (args[i] === undefined || args[i] === null || typeof args[i] === "string") {
+      continue;
+    }
+    if (result === error.value) {
+      result = false;
+    }
     if (args[i]) {
       result = true;
     }
@@ -12190,11 +12245,23 @@ exports.TRUE = function() {
 
 exports.XOR = function() {
   var args = utils.flatten(arguments);
-  var result = 0;
+  var result = error.value;
   for (var i = 0; i < args.length; i++) {
+    if (args[i] instanceof Error) {
+      return args[i];
+    }
+    if (args[i] === undefined || args[i] === null || typeof args[i] === "string") {
+      continue;
+    }
+    if (result === error.value) {
+      result = 0;
+    }
     if (args[i]) {
       result++;
     }
+  }
+  if (result === error.value) {
+    return result;
   }
   return (Math.floor(Math.abs(result)) & 1) ? true : false;
 };

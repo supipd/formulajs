@@ -25,7 +25,7 @@ for (var c in categories) {
 var cats = {}
 ,   rgxp = /function\s*\(([^\)]*?)\)/
 ; 
-Object.keys(exports).forEach( k => {
+Object.keys(exports).forEach( function(k) {
     rgxp.lastIndex = 0;
     var f = exports[k]
     ,   c = f.category
